@@ -16,6 +16,10 @@ crash.*.log
 *.tfvars
 *.tfvars.json
 
+# Local credentials file sourced before running Terraform (AWS keys + TF_VAR secrets).
+# The committed template is secrets.sh.example.
+secrets.sh
+
 # Ignore override files as they are usually used to override resources locally and so
 # are not checked in
 override.tf
@@ -42,3 +46,4 @@ terraform.rc
 # Optional: ignore plan files saved before destroying Terraform configuration
 # Uncomment the line below if you want to ignore planout files.
 # planout
+secrets.sh

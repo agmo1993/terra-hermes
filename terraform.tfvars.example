@@ -1,0 +1,36 @@
+# Copy this file to terraform.tfvars and fill in your values.
+# (terraform.tfvars is gitignored — keep real values out of version control.)
+#
+# NOTE: provider_api_key and telegram_bot_token are sensitive. They are injected
+# into the VM via user_data, which is stored in Terraform state. Prefer supplying
+# them via environment variables (TF_VAR_provider_api_key, TF_VAR_telegram_bot_token)
+# rather than committing them anywhere.
+
+# --- REQUIRED ----------------------------------------------------------------
+
+# API key for the chosen model_provider.
+provider_api_key = "sk-..."
+
+# Telegram bot token (from @BotFather). One running gateway per token.
+telegram_bot_token = "123456789:ABCdEf..."
+
+# MANDATORY: comma-separated NUMERIC Telegram user IDs allowed to use the bot.
+# Without this the gateway denies everyone ("online but silent").
+telegram_allowed_users = "123456789,987654321"
+
+# --- Hermes config (defaults shown) ------------------------------------------
+# model_provider = "openrouter"            # openrouter | anthropic | openai | nvidia
+# model_name     = "anthropic/claude-opus-4"
+# hermes_user    = "hermes"
+# provider_base_url = ""                   # override endpoint; empty = provider default
+#                                          # (nvidia default: https://integrate.api.nvidia.com/v1)
+
+# --- Infra overrides (defaults shown) ----------------------------------------
+# region            = "us-east-1"
+# instance_type     = "t3.medium"
+# availability_zone = "us-east-1d"  # empty = first subnet in the default VPC
+# name              = "hermes"
+# root_volume_size  = 20
+# tags = {
+#   Project = "hermes"
+# }
