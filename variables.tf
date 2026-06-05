@@ -81,6 +81,12 @@ variable "telegram_allowed_users" {
   }
 }
 
+variable "allowed_ports" {
+  description = "List of inbound TCP ports to open on the instance (e.g. [3000, 8080, 5173] for web prototyping). All ports are open to 0.0.0.0/0 — only use on trusted, non-production accounts."
+  type        = list(number)
+  default     = [3000, 4000, 5000, 5173, 8000, 8080, 8443, 8888]
+}
+
 variable "root_volume_size" {
   description = "Size (GiB) of the root gp3 EBS volume."
   type        = number

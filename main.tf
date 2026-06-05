@@ -50,11 +50,25 @@ resource "aws_iam_instance_profile" "hermes" {
   role = aws_iam_role.hermes.name
 }
 
-# --- Security group: no inbound; all outbound (SSM + install script downloads) ---
+# --- Security group: selected inbound ports for prototyping; all outbound ---
 resource "aws_security_group" "hermes" {
   name        = "${var.name}-sg"
-  description = "Egress-only SG for the hermes agent instance (access via SSM)."
+  description = "SG for the hermes agent instance — selected inbound ports for web prototyping, all outbound."
   vpc_id      = data.aws_vpc.default.id
+
+  # One inbound rule per port in var.allowed_ports, open to the world.
+  # Intended for prototyping on a trusted account — tighten cidr_blocks
+  # or remove ports you don't need before sharing the instance.
+  dynamic "ingress" {
+    for_each = toset(var.allowed_ports)
+    content {
+      description = "Allow TCP/${ingress.value} from anywhere (prototyping)"
+      from_port   = ingress.value
+      to_port     = ingress.value
+      protocol    = "tcp"
+      cidr_blocks = ["0.0.0.0/0"]
+    }
+  }
 
   egress {
     description = "Allow all outbound traffic"

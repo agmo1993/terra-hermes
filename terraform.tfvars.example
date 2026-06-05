@@ -26,11 +26,16 @@ telegram_allowed_users = "123456789,987654321"
 #                                          # (nvidia default: https://integrate.api.nvidia.com/v1)
 
 # --- Infra overrides (defaults shown) ----------------------------------------
-# region            = "us-east-1"
-# instance_type     = "t3.medium"
+# region = "us-east-1"
+# instance_type = "t3.medium"
 # availability_zone = "us-east-1d"  # empty = first subnet in the default VPC
-# name              = "hermes"
-# root_volume_size  = 20
+# name = "hermes"
+# root_volume_size = 20
+
+# Inbound TCP ports open on the instance for web prototyping.
+# Set to [] to revert to egress-only (no inbound access).
+# allowed_ports = [3000, 4000, 5000, 5173, 8000, 8080, 8443, 8888]
+
 # tags = {
 #   Project = "hermes"
 # }

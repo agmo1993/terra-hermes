@@ -8,8 +8,9 @@ It provisions:
 - The **Hermes Agent**, installed at first boot as a dedicated non-root user
 - The model provider + API key configured non-interactively from variables
 - The **Telegram gateway** running as a persistent per-user systemd service
-- **SSM Session Manager** access (IAM role) — no SSH, no inbound ports
-- An egress-only security group, encrypted gp3 root volume, IMDSv2 enforced
+- **Selected inbound TCP ports** open for web prototyping (default: 3000, 4000, 5000, 5173, 8000, 8080, 8443, 8888)
+- **SSM Session Manager** access (IAM role) — no SSH key required
+- An egress-only security group (overridable — see `allowed_ports`), encrypted gp3 root volume, IMDSv2 enforced
 
 Region defaults to `us-east-1`; Terraform state is stored locally.
 
@@ -164,8 +165,9 @@ through the checks below — each line tells you which stage succeeded.
 | `instance_type`          | `t3.medium`                 | EC2 instance type                                       |
 | `availability_zone`      | `us-east-1d`                | AZ to place the instance in (empty = first subnet)      |
 | `name`                   | `hermes`                    | Base name for the instance and related resources        |
-| `root_volume_size`       | `20`                        | Root gp3 volume size (GiB)                              |
-| `tags`                   | `{Project=…}`               | Tags applied to all resources                           |
+| `root_volume_size` | `20` | Root gp3 volume size (GiB) |
+| `allowed_ports` | `[3000, 4000, 5000, 5173, 8000, 8080, 8443, 8888]` | Inbound TCP ports open for web prototyping (set `[]` for egress-only) |
+| `tags` | `{Project=…}` | Tags applied to all resources |
 
 ## Teardown
 
