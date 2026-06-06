@@ -94,17 +94,19 @@ resource "aws_security_group" "hermes" {
 # Secrets Manager through an instance IAM role instead (see templates/hermes-startup.sh).
 locals {
   hermes_env_exports = <<-EOT
-    #!/bin/bash
-    export HERMES_USER='${var.hermes_user}'
-    export MODEL_PROVIDER='${var.model_provider}'
-    export MODEL_NAME='${var.model_name}'
-    export MODEL_BASE_URL='${var.provider_base_url}'
-    export PROVIDER_API_KEY='${var.provider_api_key}'
-    export TELEGRAM_BOT_TOKEN='${var.telegram_bot_token}'
-    export TELEGRAM_ALLOWED_USERS='${var.telegram_allowed_users}'
-    export HERMES_INSTALL_COMMAND='${var.hermes_install_command}'
-    export GITHUB_TOKEN='${var.github_token}'
-    EOT
+#!/bin/bash
+export HERMES_USER='${var.hermes_user}'
+export MODEL_PROVIDER='${var.model_provider}'
+export MODEL_NAME='${local.resolved_model}'
+export PROVIDER_KEY_ENV_VAR='${local.resolved_key_env_var}'
+export PROVIDER_BASE_ENV_VAR='${local.resolved_base_env_var}'
+export MODEL_BASE_URL='${local.resolved_base_url}'
+export PROVIDER_API_KEY='${var.provider_api_key}'
+export TELEGRAM_BOT_TOKEN='${var.telegram_bot_token}'
+export TELEGRAM_ALLOWED_USERS='${var.telegram_allowed_users}'
+export HERMES_INSTALL_COMMAND='${var.hermes_install_command}'
+export GITHUB_TOKEN='${var.github_token}'
+EOT
 
   hermes_user_data = join("\n", [
     local.hermes_env_exports,

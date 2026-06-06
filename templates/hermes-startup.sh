@@ -39,29 +39,13 @@ fi
 HERMES_INSTALL_COMMAND="${HERMES_INSTALL_COMMAND:-curl -fsSL https://raw.githubusercontent.com/NousResearch/hermes-agent/main/scripts/install.sh | bash}"
 
 # --- Map the provider to its API-key + base-URL env var names and default ----
-# Hermes resolves the endpoint from a per-provider <PROVIDER>_BASE_URL env var,
-# which "always wins" over the built-in default. We write it into .env so the
-# agent always talks to the right endpoint (e.g. NVIDIA NIM instead of the
-# global OpenRouter fallback). DEFAULT_BASE_URL values are the providers'
-# registry defaults; override per-deploy with var.provider_base_url.
-case "$MODEL_PROVIDER" in
-  openrouter)
-    PROVIDER_KEY_VAR="OPENROUTER_API_KEY"; PROVIDER_BASE_URL_VAR="OPENROUTER_BASE_URL"
-    DEFAULT_BASE_URL="https://openrouter.ai/api/v1" ;;
-  anthropic)
-    PROVIDER_KEY_VAR="ANTHROPIC_API_KEY"; PROVIDER_BASE_URL_VAR="ANTHROPIC_BASE_URL"
-    DEFAULT_BASE_URL="https://api.anthropic.com" ;;
-  openai)
-    PROVIDER_KEY_VAR="OPENAI_API_KEY"; PROVIDER_BASE_URL_VAR="OPENAI_BASE_URL"
-    DEFAULT_BASE_URL="https://api.openai.com/v1" ;;
-  nvidia)
-    PROVIDER_KEY_VAR="NVIDIA_API_KEY"; PROVIDER_BASE_URL_VAR="NVIDIA_BASE_URL"
-    DEFAULT_BASE_URL="https://integrate.api.nvidia.com/v1" ;;
-  *) log "ERROR: unsupported MODEL_PROVIDER='$MODEL_PROVIDER'"; exit 1 ;;
-esac
-
-# Optional Terraform override (MODEL_BASE_URL); otherwise the provider default.
-BASE_URL="${MODEL_BASE_URL:-$DEFAULT_BASE_URL}"
+# Terraform pre-resolves these from the provider catalogue in providers.tf and
+# passes them as PROVIDER_KEY_ENV_VAR / PROVIDER_BASE_ENV_VAR / MODEL_BASE_URL.
+# The startup script just uses them directly — no case statement needed.
+: "${PROVIDER_KEY_ENV_VAR:?PROVIDER_KEY_ENV_VAR must be set}"
+: "${PROVIDER_BASE_ENV_VAR:?PROVIDER_BASE_ENV_VAR must be set}"
+: "${MODEL_BASE_URL:?MODEL_BASE_URL must be set}"
+BASE_URL="$MODEL_BASE_URL"
 
 # --- Install OS dependencies (detect apt vs dnf/yum) -------------------------
 log "installing OS dependencies"
@@ -142,8 +126,8 @@ install -d -m 700 -o "$HERMES_USER" -g "$HERMES_USER" "$HERMES_HOME/.hermes"
 umask 077
 {
 cat <<EOF
-$PROVIDER_KEY_VAR=$PROVIDER_API_KEY
-$PROVIDER_BASE_URL_VAR=$BASE_URL
+$PROVIDER_KEY_ENV_VAR=$PROVIDER_API_KEY
+$PROVIDER_BASE_ENV_VAR=$BASE_URL
 TELEGRAM_BOT_TOKEN=$TELEGRAM_BOT_TOKEN
 TELEGRAM_ALLOWED_USERS=$TELEGRAM_ALLOWED_USERS
 EOF

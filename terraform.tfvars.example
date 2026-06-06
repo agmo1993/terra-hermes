@@ -8,6 +8,14 @@
 
 # --- REQUIRED ----------------------------------------------------------------
 
+# Pick a provider — the default model and base URL are auto-filled from the
+# provider catalogue in providers.tf:
+#   openrouter  → anthropic/claude-sonnet-4  + https://openrouter.ai/api/v1
+#   anthropic   → claude-sonnet-4            + https://api.anthropic.com
+#   openai      → gpt-4.1                    + https://api.openai.com/v1
+#   nvidia      → z-ai/glm-5.1              + https://integrate.api.nvidia.com/v1
+model_provider = "openrouter"
+
 # API key for the chosen model_provider.
 provider_api_key = "sk-..."
 
@@ -18,16 +26,17 @@ telegram_bot_token = "123456789:ABCdEf..."
 # Without this the gateway denies everyone ("online but silent").
 telegram_allowed_users = "123456789,987654321"
 
+# --- Optional overrides (defaults shown) -------------------------------------
+
+# Override the default model for the chosen provider (empty = catalogue default).
+# model_name = ""
+
+# Override the provider API base URL (empty = catalogue default).
+# provider_base_url = ""
+
 # Optional: GitHub PAT — enables gh CLI + git push on the deployed VM.
 # Leave unset (or empty) to skip GitHub auth entirely.
 # github_token = "ghp_..."
-
-# --- Hermes config (defaults shown) ------------------------------------------
-# model_provider = "openrouter"            # openrouter | anthropic | openai | nvidia
-# model_name     = "anthropic/claude-opus-4"
-# hermes_user    = "hermes"
-# provider_base_url = ""                   # override endpoint; empty = provider default
-#                                          # (nvidia default: https://integrate.api.nvidia.com/v1)
 
 # --- Infra overrides (defaults shown) ----------------------------------------
 # region = "us-east-1"

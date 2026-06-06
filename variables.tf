@@ -37,7 +37,7 @@ variable "hermes_user" {
 }
 
 variable "model_provider" {
-  description = "Model provider for Hermes. One of: openrouter, anthropic, openai, nvidia."
+  description = "Model provider for Hermes. Choose one and the default model + base URL are auto-filled from the provider catalogue in providers.tf."
   type        = string
   default     = "openrouter"
 
@@ -48,13 +48,13 @@ variable "model_provider" {
 }
 
 variable "model_name" {
-  description = "Default model identifier for Hermes (e.g. 'anthropic/claude-opus-4')."
+  description = "Override the default model for the chosen provider (empty = use the provider catalogue default, e.g. openrouter → anthropic/claude-sonnet-4)."
   type        = string
-  default     = "anthropic/claude-opus-4"
+  default     = ""
 }
 
 variable "provider_base_url" {
-  description = "Override the provider API base URL (written to <PROVIDER>_BASE_URL in .env). Empty uses the provider's built-in default (e.g. NVIDIA -> https://integrate.api.nvidia.com/v1)."
+  description = "Override the provider API base URL (empty = use the provider catalogue default)."
   type        = string
   default     = ""
 }

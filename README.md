@@ -6,6 +6,7 @@ It provisions:
 
 - One `t3.medium` **Ubuntu 24.04 LTS** (amd64) instance in the default VPC
 - The **Hermes Agent**, installed at first boot as a dedicated non-root user
+- A **provider catalogue** — pick a provider and the default model + base URL are auto-filled
 - The model provider + API key configured non-interactively from variables
 - The **Telegram gateway** running as a persistent per-user systemd service
 - **Selected inbound TCP ports** open for web prototyping (default: 3000, 4000, 5000, 5173, 8000, 8080, 8443, 8888)
@@ -23,13 +24,28 @@ variables below) ahead of it, so nothing is hand-edited on the box.
 > service. For production, store them in SSM Parameter Store / Secrets Manager and
 > fetch them at boot via an instance IAM role (noted in the startup script).
 
+## Provider catalogue
+
+Pick a provider via `model_provider` and the default model + base URL are resolved
+automatically from the catalogue in `providers.tf`:
+
+| Provider | Default model | Base URL |
+| ---------- | ------------------------- | ---------------------------------------- |
+| `openrouter` | `anthropic/claude-sonnet-4` | `https://openrouter.ai/api/v1` |
+| `anthropic` | `claude-sonnet-4` | `https://api.anthropic.com` |
+| `openai` | `gpt-4.1` | `https://api.openai.com/v1` |
+| `nvidia` | `z-ai/glm-5.1` | `https://integrate.api.nvidia.com/v1` |
+
+To override the default model or base URL for a provider, set `model_name` or
+`provider_base_url` (empty = use the catalogue default).
+
 ## Prerequisites
 
 - [Terraform](https://developer.hashicorp.com/terraform) >= 1.5
 - AWS credentials configured (e.g. `aws configure` or environment variables)
 - A default VPC in the target region (standard on most accounts)
 - For connecting: the AWS CLI + the
-  [Session Manager plugin](https://docs.aws.amazon.com/systems-manager/latest/userguide/session-manager-working-with-install-plugin.html)
+ [Session Manager plugin](https://docs.aws.amazon.com/systems-manager/latest/userguide/session-manager-working-with-install-plugin.html)
 
 ## Authentication via `secrets.sh`
 
@@ -46,29 +62,31 @@ Requirements — the file must `export` the following:
 
 # AWS credentials (used by Terraform to create/destroy resources)
 export AWS_ACCESS_KEY_ID="AKIA..."
-export AWS_SECRET_ACCESS_KEY="..."
-export AWS_REGION="us-east-1"                        # optional; matches var.region
+export AWS_SECRET_ACCESS_KEY=*** AWS_REGION="us-east-1" # optional; matches var.region
 
 # Hermes secrets (consumed as Terraform variables)
-export TF_VAR_provider_api_key="nvapi-..."           # key for your model_provider
-export TF_VAR_telegram_bot_token="123456789:ABC..."  # from @BotFather
+export TF_VAR_provider_api_key="nvapi-..." # key for your model_provider
+export TF_VAR_telegram_bot_token="123456789:ABC..." # from @BotFather
 
 # Optional: keep this here too instead of in terraform.tfvars
 export TF_VAR_telegram_allowed_users="123456789,987654321"
+
+# Optional: GitHub PAT — enables gh CLI + git push on the deployed VM.
+# export TF_VAR_github_token="ghp_..."
 ```
 
 - The IAM user behind those keys needs permissions for EC2, IAM (role +
-  instance profile), and security groups, plus `ssm:StartSession` to connect.
-  Prefer an IAM user over root keys.
+ instance profile), and security groups, plus `ssm:StartSession` to connect.
+ Prefer an IAM user over root keys.
 - Keep it out of git — this repo already ignores `secrets.sh` — and
-  `chmod 600 secrets.sh`.
+ `chmod 600 secrets.sh`.
 - `source` it in the same shell before any Terraform/AWS command:
 
-  ```sh
-  cp secrets.sh.example secrets.sh   # then edit in your values
-  chmod 600 secrets.sh
-  source ./secrets.sh
-  ```
+ ```sh
+ cp secrets.sh.example secrets.sh # then edit in your values
+ chmod 600 secrets.sh
+ source ./secrets.sh
+ ```
 
 > The Hermes secrets are still written into the instance `user_data` and therefore
 > into Terraform **state**. `secrets.sh` only keeps them out of source files and
@@ -78,32 +96,37 @@ export TF_VAR_telegram_allowed_users="123456789,987654321"
 ## Usage
 
 1. Provide configuration. Non-secret values go in `terraform.tfvars`; credentials
-   come from `secrets.sh`:
+ come from `secrets.sh`:
 
-   ```sh
-   cp terraform.tfvars.example terraform.tfvars
-   # edit terraform.tfvars: model_provider, model_name, telegram_allowed_users, ...
+ ```sh
+ cp terraform.tfvars.example terraform.tfvars
+ # edit terraform.tfvars: model_provider, telegram_allowed_users, ...
+ # Pick a provider — default model + base URL are auto-filled:
+ #   model_provider = "openrouter"
+ #   model_provider = "anthropic"
+ #   model_provider = "openai"
+ #   model_provider = "nvidia"
 
-   source ./secrets.sh   # AWS keys + TF_VAR_provider_api_key + TF_VAR_telegram_bot_token
-   ```
+ source ./secrets.sh # AWS keys + TF_VAR_provider_api_key + TF_VAR_telegram_bot_token
+ ```
 
 2. Deploy:
 
-   ```sh
-   terraform init
-   terraform plan
-   terraform apply
-   ```
+ ```sh
+ terraform init
+ terraform plan
+ terraform apply
+ ```
 
 3. Connect to the instance via SSM (no SSH key required):
 
-   ```sh
-   aws ssm start-session --target <instance_id> --region us-east-1
-   ```
+ ```sh
+ aws ssm start-session --target <instance_id> --region us-east-1
+ ```
 
-   The exact command is printed as the `ssm_session_command` output. The instance
-   must show as **Online** in SSM Fleet Manager before you can connect (usually a
-   minute or two after boot).
+ The exact command is printed as the `ssm_session_command` output. The instance
+ must show as **Online** in SSM Fleet Manager before you can connect (usually a
+ minute or two after boot).
 
 ## Verify the installation via SSM
 
@@ -114,58 +137,59 @@ through the checks below — each line tells you which stage succeeded.
 
 1. **Open a session** (no SSH key needed; instance must be `Online` in SSM):
 
-   ```sh
-   aws ssm start-session --target $(terraform output -raw instance_id) --region us-east-1
-   ```
+ ```sh
+ aws ssm start-session --target $(terraform output -raw instance_id) --region us-east-1
+ ```
 
 2. **Confirm the bootstrap finished cleanly:**
 
-   ```sh
-   cloud-init status --long                          # want: status: done
-   sudo grep '\[hermes-startup\]' /var/log/cloud-init-output.log
-   ```
+ ```sh
+ cloud-init status --long # want: status: done
+ sudo grep '\[hermes-startup\]' /var/log/cloud-init-output.log
+ ```
 
-   The last marker should read `[hermes-startup] Hermes bootstrap complete`. If
-   not, the step after the final marker is where it failed.
+ The last marker should read `[hermes-startup] Hermes bootstrap complete`. If
+ not, the step after the final marker is where it failed.
 
 3. **Confirm the CLI, config, and endpoint:**
 
-   ```sh
-   sudo -u hermes -H bash -lc 'hermes --version'      # CLI installed
-   sudo ls -l /home/hermes/.hermes/.env               # secrets file (600, hermes-owned)
-   sudo -u hermes -H bash -lc 'hermes config check'   # provider + API key + base URL reachable
-   ```
+ ```sh
+ sudo -u hermes -H bash -lc 'hermes --version' # CLI installed
+ sudo ls -l /home/hermes/.hermes/.env # secrets file (600, hermes-owned)
+ sudo -u hermes -H bash -lc 'hermes config check' # provider + API key + base URL reachable
+ ```
 
 4. **Confirm the Telegram gateway is running** (persistent per-user service):
 
-   ```sh
-   sudo -u hermes XDG_RUNTIME_DIR=/run/user/$(id -u hermes) \
-     systemctl --user status 'hermes*'                # want: active (running)
-   # live logs:
-   sudo -u hermes XDG_RUNTIME_DIR=/run/user/$(id -u hermes) \
-     journalctl --user -u 'hermes*' -f
-   ```
+ ```sh
+ sudo -u hermes XDG_RUNTIME_DIR=/run/user/$(id -u hermes) \
+ systemctl --user status 'hermes*' # want: active (running)
+ # live logs:
+ sudo -u hermes XDG_RUNTIME_DIR=/run/user/$(id -u hermes) \
+ journalctl --user -u 'hermes*' -f
+ ```
 
 5. **End-to-end:** message the bot from a Telegram account whose numeric ID is in
-   `telegram_allowed_users`. A reply confirms the full chain. "Online but silent"
-   almost always means your ID isn't in that list.
+ `telegram_allowed_users`. A reply confirms the full chain. "Online but silent"
+ almost always means your ID isn't in that list.
 
 ## Configuration
 
-| Variable                 | Default                     | Description                                              |
+| Variable | Default | Description |
 | ------------------------ | --------------------------- | ------------------------------------------------------- |
-| `provider_api_key`       | _(required, sensitive)_     | API key for the chosen `model_provider`                 |
-| `telegram_bot_token`     | _(required, sensitive)_     | Telegram bot token (one running gateway per token)      |
+| `model_provider` | `openrouter` | `openrouter` \| `anthropic` \| `openai` \| `nvidia` — default model + base URL auto-filled |
+| `model_name` | `""` (catalogue default) | Override the default model for the chosen provider |
+| `provider_base_url` | `""` (catalogue default) | Override the provider API base URL |
+| `provider_api_key` | _(required, sensitive)_ | API key for the chosen `model_provider` |
+| `telegram_bot_token` | _(required, sensitive)_ | Telegram bot token (one running gateway per token) |
 | `telegram_allowed_users` | _(required)_ | Comma-separated NUMERIC Telegram user IDs (mandatory) |
 | `github_token` | `""` (optional, sensitive) | GitHub PAT — enables gh CLI + git push on the VM (empty = skip GitHub auth) |
-| `model_provider`         | `openrouter`                | `openrouter` \| `anthropic` \| `openai`                 |
-| `model_name`             | `anthropic/claude-opus-4`   | Default model identifier                                |
-| `hermes_user`            | `hermes`                    | Dedicated non-root user that runs Hermes                |
-| `hermes_install_command` | Hermes `install.sh` via curl | Command (run as `hermes_user`) to install the CLI      |
-| `region`                 | `us-east-1`                 | AWS region                                              |
-| `instance_type`          | `t3.medium`                 | EC2 instance type                                       |
-| `availability_zone`      | `us-east-1d`                | AZ to place the instance in (empty = first subnet)      |
-| `name`                   | `hermes`                    | Base name for the instance and related resources        |
+| `hermes_user` | `hermes` | Dedicated non-root user that runs Hermes |
+| `hermes_install_command` | Hermes `install.sh` via curl | Command (run as `hermes_user`) to install the CLI |
+| `region` | `us-east-1` | AWS region |
+| `instance_type` | `t3.medium` | EC2 instance type |
+| `availability_zone` | `us-east-1d` | AZ to place the instance in (empty = first subnet) |
+| `name` | `hermes` | Base name for the instance and related resources |
 | `root_volume_size` | `20` | Root gp3 volume size (GiB) |
 | `allowed_ports` | `[3000, 4000, 5000, 5173, 8000, 8080, 8443, 8888]` | Inbound TCP ports open for web prototyping (set `[]` for egress-only) |
 | `tags` | `{Project=…}` | Tags applied to all resources |
