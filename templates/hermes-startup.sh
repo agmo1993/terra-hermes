@@ -112,16 +112,45 @@ run_as_hermes() {
 log "installing Hermes CLI as $HERMES_USER"
 run_as_hermes "$HERMES_INSTALL_COMMAND"
 
+# --- Optional: authenticate the GitHub CLI with the provided PAT ---------------
+# When GITHUB_TOKEN is set (non-empty), install the gh CLI, authenticate it,
+# and configure git credential-helper so the Hermes agent can push/open PRs.
+# When empty, this entire block is skipped — no GitHub auth on the VM.
+if [[ -n "${GITHUB_TOKEN:-}" ]]; then
+ log "installing GitHub CLI (gh)"
+ GH_VERSION=$(curl -fsSL -o /dev/null -w '%{url_effective}' https://github.com/cli/cli/releases/latest | sed 's|.*/v||')
+ curl -fsSL "https://github.com/cli/cli/releases/download/v${GH_VERSION}/gh_${GH_VERSION}_linux_amd64.tar.gz" \
+ -o /tmp/gh.tar.gz
+ tar -xzf /tmp/gh.tar.gz -C /tmp
+ cp "/tmp/gh_${GH_VERSION}_linux_amd64/bin/gh" "$HERMES_HOME/.local/bin/gh"
+ rm -rf "/tmp/gh_${GH_VERSION}_linux_amd64" /tmp/gh.tar.gz
+
+ log "authenticating gh CLI as $HERMES_USER"
+ run_as_hermes "echo '$GITHUB_TOKEN' | gh auth login --with-token"
+ run_as_hermes "gh auth setup-git"
+
+ # Also write GITHUB_TOKEN into .env so the Hermes agent can use it
+ # (e.g. for the xurl toolset or direct API calls).
+ log "GITHUB_TOKEN written to .env (see below)"
+else
+ log "GITHUB_TOKEN not set — skipping GitHub CLI auth"
+fi
+
 # --- Write ~/.hermes/.env (chmod 600, owned by the hermes user) --------------
 log "writing $HERMES_HOME/.hermes/.env"
 install -d -m 700 -o "$HERMES_USER" -g "$HERMES_USER" "$HERMES_HOME/.hermes"
 umask 077
-cat >"$HERMES_HOME/.hermes/.env" <<EOF
+{
+cat <<EOF
 $PROVIDER_KEY_VAR=$PROVIDER_API_KEY
 $PROVIDER_BASE_URL_VAR=$BASE_URL
 TELEGRAM_BOT_TOKEN=$TELEGRAM_BOT_TOKEN
 TELEGRAM_ALLOWED_USERS=$TELEGRAM_ALLOWED_USERS
 EOF
+if [[ -n "${GITHUB_TOKEN:-}" ]]; then
+ echo "GITHUB_TOKEN=$GITHUB_TOKEN"
+fi
+} >"$HERMES_HOME/.hermes/.env"
 chown "$HERMES_USER:$HERMES_USER" "$HERMES_HOME/.hermes/.env"
 chmod 600 "$HERMES_HOME/.hermes/.env"
 

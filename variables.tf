@@ -71,6 +71,13 @@ variable "telegram_bot_token" {
   sensitive   = true
 }
 
+variable "github_token" {
+  description = "GitHub personal access token for the Hermes agent (optional). When set, the startup script authenticates the gh CLI and configures git credential-helper so the agent can push/open PRs. When empty, GitHub auth is skipped entirely."
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
 variable "telegram_allowed_users" {
   description = "MANDATORY comma-separated list of NUMERIC Telegram user IDs allowed to use the bot. Empty makes the gateway deny everyone ('online but silent')."
   type        = string

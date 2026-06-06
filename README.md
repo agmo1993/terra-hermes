@@ -156,7 +156,8 @@ through the checks below — each line tells you which stage succeeded.
 | ------------------------ | --------------------------- | ------------------------------------------------------- |
 | `provider_api_key`       | _(required, sensitive)_     | API key for the chosen `model_provider`                 |
 | `telegram_bot_token`     | _(required, sensitive)_     | Telegram bot token (one running gateway per token)      |
-| `telegram_allowed_users` | _(required)_                | Comma-separated NUMERIC Telegram user IDs (mandatory)   |
+| `telegram_allowed_users` | _(required)_ | Comma-separated NUMERIC Telegram user IDs (mandatory) |
+| `github_token` | `""` (optional, sensitive) | GitHub PAT — enables gh CLI + git push on the VM (empty = skip GitHub auth) |
 | `model_provider`         | `openrouter`                | `openrouter` \| `anthropic` \| `openai`                 |
 | `model_name`             | `anthropic/claude-opus-4`   | Default model identifier                                |
 | `hermes_user`            | `hermes`                    | Dedicated non-root user that runs Hermes                |

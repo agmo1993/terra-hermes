@@ -18,6 +18,10 @@ telegram_bot_token = "123456789:ABCdEf..."
 # Without this the gateway denies everyone ("online but silent").
 telegram_allowed_users = "123456789,987654321"
 
+# Optional: GitHub PAT — enables gh CLI + git push on the deployed VM.
+# Leave unset (or empty) to skip GitHub auth entirely.
+# github_token = "ghp_..."
+
 # --- Hermes config (defaults shown) ------------------------------------------
 # model_provider = "openrouter"            # openrouter | anthropic | openai | nvidia
 # model_name     = "anthropic/claude-opus-4"

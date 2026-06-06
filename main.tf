@@ -103,7 +103,8 @@ locals {
     export TELEGRAM_BOT_TOKEN='${var.telegram_bot_token}'
     export TELEGRAM_ALLOWED_USERS='${var.telegram_allowed_users}'
     export HERMES_INSTALL_COMMAND='${var.hermes_install_command}'
-  EOT
+    export GITHUB_TOKEN='${var.github_token}'
+    EOT
 
   hermes_user_data = join("\n", [
     local.hermes_env_exports,
