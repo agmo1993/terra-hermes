@@ -106,6 +106,8 @@ export TELEGRAM_BOT_TOKEN='${var.telegram_bot_token}'
 export TELEGRAM_ALLOWED_USERS='${var.telegram_allowed_users}'
 export HERMES_INSTALL_COMMAND='${var.hermes_install_command}'
 export GITHUB_TOKEN='${var.github_token}'
+export AGENTMAIL_API_KEY='${var.agentmail_api_key}'
+export AGENTMAIL_INBOX_DISPLAY_NAME='${var.agentmail_inbox_display_name}'
 EOT
 
   hermes_user_data = join("\n", [

@@ -120,6 +120,66 @@ else
  log "GITHUB_TOKEN not set — skipping GitHub CLI auth"
 fi
 
+# --- Optional: install and configure AgentMail (MCP + Python SDK + inbox) ------
+# When AGENTMAIL_API_KEY is set (non-empty), the startup script:
+#   1. Installs the AgentMail Python SDK (pip3 install agentmail)
+#   2. Writes AGENTMAIL_API_KEY to ~/.hermes/.env
+#   3. Adds the AgentMail MCP server to the Hermes config (via hermes config)
+#   4. Creates a default inbox (using AGENTMAIL_INBOX_DISPLAY_NAME)
+# When empty, this entire block is skipped — no AgentMail on the VM.
+#
+# SECURITY: same caveats as other secrets — the key is in user_data which
+# Terraform stores in state and EC2 exposes via IMDS. Harden by fetching
+# from SSM Parameter Store / Secrets Manager instead (see top-of-file note).
+if [[ -n "${AGENTMAIL_API_KEY:-}" ]]; then
+ log "installing AgentMail Python SDK"
+ run_as_hermes "pip3 install agentmail 2>&1 | tail -1"
+
+ # The AGENTMAIL_API_KEY will be written to .env below (in the
+ # ~/.hermes/.env write block), alongside the other secrets.
+
+ # Add the AgentMail MCP server to Hermes config using Python (yaml
+ # safe-load/dump to merge into the existing config.yaml without
+ # clobbering any other MCP servers the user may have added).
+ log "configuring AgentMail MCP server in Hermes config"
+ run_as_hermes "python3 -c '
+import yaml, os
+cfg_path = os.path.expanduser(\"~/.hermes/config.yaml\")
+with open(cfg_path, \"r\") as f:
+    cfg = yaml.safe_load(f) or {}
+mcp = cfg.get(\"mcp_servers\", {})
+mcp[\"agentmail\"] = {
+    \"command\": \"npx\",
+    \"args\": [\"-y\", \"agentmail-mcp\"],
+    \"env\": {\"AGENTMAIL_API_KEY\": os.environ[\"AGENTMAIL_API_KEY\"]},
+}
+cfg[\"mcp_servers\"] = mcp
+with open(cfg_path, \"w\") as f:
+    yaml.dump(cfg, f, default_flow_style=False, sort_keys=False)
+print(\"OK\")
+'"
+
+ # Create a default inbox using the Python SDK.
+ AGENTMAIL_INBOX_DISPLAY_NAME="${AGENTMAIL_INBOX_DISPLAY_NAME:-hermes-agent}"
+ log "creating AgentMail inbox (display_name=$AGENTMAIL_INBOX_DISPLAY_NAME)"
+ INBOX_JSON=$(run_as_hermes "python3 -c '
+import json, sys, os
+from agentmail import AgentMail
+client = AgentMail()
+existing = client.inboxes.list()
+if existing.inboxes and len(existing.inboxes) > 0:
+    inbox = existing.inboxes[0]
+    print(json.dumps({\"email\": inbox.email, \"display_name\": inbox.display_name, \"existing\": True}))
+    sys.exit(0)
+inbox = client.inboxes.create(request={\"display_name\": \"'\"$AGENTMAIL_INBOX_DISPLAY_NAME\"'\"})
+print(json.dumps({\"email\": inbox.email, \"display_name\": inbox.display_name, \"existing\": False}))
+'")
+ log "AgentMail inbox ready: $INBOX_JSON"
+ log "AGENTMAIL_API_KEY written to .env (see below)"
+else
+ log "AGENTMAIL_API_KEY not set — skipping AgentMail setup"
+fi
+
 # --- Write ~/.hermes/.env (chmod 600, owned by the hermes user) --------------
 log "writing $HERMES_HOME/.hermes/.env"
 install -d -m 700 -o "$HERMES_USER" -g "$HERMES_USER" "$HERMES_HOME/.hermes"
@@ -133,6 +193,9 @@ TELEGRAM_ALLOWED_USERS=$TELEGRAM_ALLOWED_USERS
 EOF
 if [[ -n "${GITHUB_TOKEN:-}" ]]; then
  echo "GITHUB_TOKEN=$GITHUB_TOKEN"
+fi
+if [[ -n "${AGENTMAIL_API_KEY:-}" ]]; then
+ echo "AGENTMAIL_API_KEY=$AGENTMAIL_API_KEY"
 fi
 } >"$HERMES_HOME/.hermes/.env"
 chown "$HERMES_USER:$HERMES_USER" "$HERMES_HOME/.hermes/.env"

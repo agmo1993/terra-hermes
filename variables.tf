@@ -88,6 +88,19 @@ variable "telegram_allowed_users" {
   }
 }
 
+variable "agentmail_api_key" {
+  description = "AgentMail API key for the MCP integration (optional). When set, the startup script installs the AgentMail Python SDK, configures the MCP server in Hermes, and creates a default inbox. When empty, AgentMail is skipped entirely."
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
+variable "agentmail_inbox_display_name" {
+  description = "Display name for the default AgentMail inbox created on boot (only used when agentmail_api_key is set)."
+  type        = string
+  default     = "hermes-agent"
+}
+
 variable "allowed_ports" {
   description = "List of inbound TCP ports to open on the instance (e.g. [3000, 8080, 5173] for web prototyping). All ports are open to 0.0.0.0/0 — only use on trusted, non-production accounts."
   type        = list(number)

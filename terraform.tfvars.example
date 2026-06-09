@@ -38,6 +38,15 @@ telegram_allowed_users = "123456789,987654321"
 # Leave unset (or empty) to skip GitHub auth entirely.
 # github_token = "ghp_..."
 
+# Optional: AgentMail API key — enables the AgentMail MCP integration on the
+# deployed VM (Python SDK, MCP server config, default inbox creation).
+# Leave unset (or empty) to skip AgentMail entirely.
+# agentmail_api_key = "am_us_..."
+
+# Optional: display name for the default AgentMail inbox created on boot
+# (only used when agentmail_api_key is set).
+# agentmail_inbox_display_name = "hermes-agent"
+
 # --- Infra overrides (defaults shown) ----------------------------------------
 # region = "us-east-1"
 # instance_type = "t3.medium"
