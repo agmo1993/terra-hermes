@@ -34,10 +34,10 @@ locals {
   # Resolved provider config — looks up the catalogue entry for the
   # chosen provider.  var.model_name and var.provider_base_url can
   # override the catalogue defaults when set (non-empty).
-  selected_provider    = local.provider_catalogue[var.model_provider]
-  resolved_model       = var.model_name != "" ? var.model_name : local.selected_provider.model
-  resolved_base_url    = var.provider_base_url != "" ? var.provider_base_url : local.selected_provider.base_url
-  resolved_key_env_var = local.selected_provider.key_env_var
+  selected_provider     = local.provider_catalogue[var.model_provider]
+  resolved_model        = var.model_name != "" ? var.model_name : local.selected_provider.model
+  resolved_base_url     = var.provider_base_url != "" ? var.provider_base_url : local.selected_provider.base_url
+  resolved_key_env_var  = local.selected_provider.key_env_var
   resolved_base_env_var = local.selected_provider.base_env_var
 }
 
