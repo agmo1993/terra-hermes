@@ -53,7 +53,7 @@ resource "aws_iam_instance_profile" "hermes" {
 # --- Security group: selected inbound ports for prototyping; all outbound ---
 resource "aws_security_group" "hermes" {
   name        = "${var.name}-sg"
-  description = "SG for the hermes agent instance — selected inbound ports for web prototyping, all outbound."
+  description = "SG for the hermes agent instance - selected inbound ports for web prototyping, all outbound."
   vpc_id      = data.aws_vpc.default.id
 
   # One inbound rule per port in var.allowed_ports, open to the world.
