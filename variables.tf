@@ -101,6 +101,17 @@ variable "agentmail_inbox_display_name" {
   default     = "hermes-agent"
 }
 
+variable "notification_email" {
+  description = "Email address to notify (via AgentMail) once the agent is deployed and online. Only used when agentmail_api_key is also set. Empty = no email notification."
+  type        = string
+  default     = ""
+
+  validation {
+    condition     = var.notification_email == "" || can(regex("^[^@[:space:]]+@[^@[:space:]]+\\.[^@[:space:]]+$", var.notification_email))
+    error_message = "notification_email must be empty or a valid email address."
+  }
+}
+
 variable "allowed_ports" {
   description = "List of inbound TCP ports to open on the instance (e.g. [3000, 8080, 5173] for web prototyping). All ports are open to 0.0.0.0/0 — only use on trusted, non-production accounts."
   type        = list(number)

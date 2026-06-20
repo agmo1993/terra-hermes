@@ -108,6 +108,7 @@ export HERMES_INSTALL_COMMAND='${var.hermes_install_command}'
 export GITHUB_TOKEN='${var.github_token}'
 export AGENTMAIL_API_KEY='${var.agentmail_api_key}'
 export AGENTMAIL_INBOX_DISPLAY_NAME='${var.agentmail_inbox_display_name}'
+export NOTIFICATION_EMAIL='${var.notification_email}'
 EOT
 
   hermes_user_data = join("\n", [

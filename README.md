@@ -132,8 +132,35 @@ export TF_VAR_telegram_allowed_users="123456789,987654321"
 
 Wait 5 minutes after the `terraform apply` to allow time for the hermes installation to be completed
 
-The whole agent runs under the dedicated `hermes` user. Connect, then work
-through the checks below — each line tells you which stage succeeded.
+### Automated: `verify-install.sh`
+
+The quickest check is the bundled `verify-install.sh`, which runs all of the
+checks below remotely and non-interactively via `aws ssm send-command`, then
+prints a PASS/FAIL report. No SSH key or Session Manager plugin is required — it
+uses the same SSM access the deploy relies on, and auto-discovers the instance
+ID and region from the Terraform state.
+
+```sh
+source ./secrets.sh   # for AWS credentials
+./verify-install.sh   # auto-discovers instance + region from tfstate
+```
+
+You can override the target explicitly if needed:
+
+```sh
+INSTANCE_ID=i-0123... REGION=us-east-1 ./verify-install.sh
+```
+
+It exits non-zero if any required check fails. The script covers bootstrap
+completion, the CLI/config/secrets, the Telegram gateway, a live one-shot
+inference against the provider API, and the optional AgentMail and GitHub
+integrations.
+
+### Manual
+
+To inspect things by hand instead, the whole agent runs under the dedicated
+`hermes` user. Connect, then work through the checks below — each line tells you
+which stage succeeded.
 
 1. **Open a session** (no SSH key needed; instance must be `Online` in SSM):
 
