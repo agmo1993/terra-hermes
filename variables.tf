@@ -107,3 +107,35 @@ variable "tags" {
     Project = "hermes"
   }
 }
+
+# --- SES Email Configuration --------------------------------------------------
+variable "ses_domain" {
+  description = "Fully qualified domain for SES (e.g., 'hermes.example.com' or 'example.com'). Must exist in your Route 53 hosted zone."
+  type        = string
+  default     = ""
+}
+
+variable "route53_hosted_zone_name" {
+  description = "Name of your existing Route 53 hosted zone (e.g., 'example.com.'). Include trailing dot."
+  type        = string
+  default     = ""
+}
+
+variable "email_s3_bucket_name" {
+  description = "Globally unique S3 bucket name for raw email storage."
+  type        = string
+  default     = ""
+}
+
+variable "enable_email_processing" {
+  description = "Enable full SES → S3 → SNS → Lambda → Hermes pipeline."
+  type        = bool
+  default     = false
+}
+
+variable "hermes_webhook_secret" {
+  description = "HMAC secret for Hermes webhook authentication (generate: openssl rand -hex 32)."
+  type        = string
+  sensitive   = true
+  default     = ""
+}
