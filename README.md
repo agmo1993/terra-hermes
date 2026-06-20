@@ -194,6 +194,112 @@ through the checks below — each line tells you which stage succeeded.
 | `allowed_ports` | `[3000, 4000, 5000, 5173, 8000, 8080, 8443, 8888]` | Inbound TCP ports open for web prototyping (set `[]` for egress-only) |
 | `tags` | `{Project=…}` | Tags applied to all resources |
 
+## Finding Your Route 53 Domains for SES
+
+To use the SES email integration, you need a domain managed by Route 53. Here's how to find available domains:
+
+### List All Hosted Zones (AWS CLI)
+
+```bash
+# List all hosted zones in your account
+aws route53 list-hosted-zones \
+  --query 'HostedZones[*].[Name,Id,Config.PrivateZone]' \
+  --output table
+```
+
+**Example output:**
+```
+---------------------------------------------------
+|          ListHostedZones                         |
++------------------+-----------------+-----------+
+|  example.com.    |  Z1234567890ABC |  False    |
+|  staging.example.com. | Z0987654321DEF |  False    |
+|  internal.corp.  |  Z111222333444  |  True     |
++------------------+-----------------+-----------+
+```
+
+- **Name** = hosted zone name (use this for `route53_hosted_zone_name` in tfvars)
+- **Id** = hosted zone ID (e.g., `Z1234567890ABC`)
+- **PrivateZone** = `False` means public domain (required for SES), `True` = private/internal
+
+### Find a Specific Domain
+
+```bash
+# Search for a specific domain
+aws route53 list-hosted-zones-by-name \
+  --dns-name "example.com" \
+  --query 'HostedZones[0].[Name,Id]' \
+  --output text
+```
+
+### List All Record Sets in a Zone (to check existing subdomains)
+
+```bash
+# Replace Z1234567890ABC with your hosted zone ID
+aws route53 list-resource-record-sets \
+  --hosted-zone-id Z1234567890ABC \
+  --query 'ResourceRecordSets[?Type==`A` || Type==`CNAME`].{Name:Name,Type:Type,Value:ResourceRecords[0].Value}' \
+  --output table
+```
+
+### Use a Subdomain for Hermes (Recommended)
+
+Instead of using your root domain (`example.com`), create a dedicated subdomain for Hermes:
+
+```bash
+# 1. Get your hosted zone ID
+ZONE_ID=$(aws route53 list-hosted-zones-by-name --dns-name "example.com" --query 'HostedZones[0].Id' --output text | cut -d'/' -f3)
+
+# 2. Create NS record delegating hermes.example.com to SES (optional, or just use as subdomain)
+# Actually for SES you can just use the subdomain directly with the parent zone
+```
+
+**In your `terraform.tfvars`:**
+```hcl
+# Use subdomain (recommended)
+ses_domain              = "hermes.example.com"
+route53_hosted_zone_name = "example.com."      # Parent zone with trailing dot
+
+# OR use root domain
+ses_domain              = "example.com"
+route53_hosted_zone_name = "example.com."      # With trailing dot
+```
+
+### Verify Domain Ownership
+
+Before deploying, confirm you own the domain and it's in Route 53:
+
+```bash
+# Check domain registration status (if registered via Route 53)
+aws route53domains list-domains --query 'Domains[*].[DomainName,AutoRenew,Expiry]' --output table
+
+# Or just verify the hosted zone exists
+aws route53 get-hosted-zone --id Z1234567890ABC
+```
+
+### Required DNS Records (Created Automatically by Terraform)
+
+When you deploy with `enable_email_processing = true`, Terraform creates these records in **your existing hosted zone**:
+
+| Record | Purpose |
+|--------|---------|
+| `MX @` | Routes incoming email to SES (`inbound-smtp.us-east-1.amazonaws.com`) |
+| `TXT _amazonses` | Domain ownership verification token |
+| `CNAME <dkim-token-1>._domainkey` | DKIM signing (3 records) |
+| `TXT @` | SPF record (`v=spf1 include:amazonses.com ~all`) |
+| `TXT _dmarc` | DMARC policy (`v=DMARC1; p=quarantine; rua=mailto:dmarc@...`) |
+
+### Troubleshooting
+
+**Domain not showing in list?**
+- Ensure you're in the correct AWS account/region
+- Check if domain is registered with a different registrar (not Route 53) — you can still use it but must manage DNS manually
+- Private hosted zones (`PrivateZone=true`) cannot be used for SES email receiving
+
+**Want to use a domain registered elsewhere?**
+- Point your registrar's nameservers to Route 53, OR
+- Manually create the above DNS records at your registrar
+
 ## Teardown
 
 ```sh
