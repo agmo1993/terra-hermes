@@ -300,6 +300,43 @@ When you deploy with `enable_email_processing = true`, Terraform creates these r
 - Point your registrar's nameservers to Route 53, OR
 - Manually create the above DNS records at your registrar
 
+## IAM Permissions for Deployment
+
+The identity running `terraform apply` needs permissions for all resources created. See [`iam-deployment-policy.json`](iam-deployment-policy.json) for the complete policy.
+
+### Quick Summary of Required Permissions
+
+| Service | Actions Needed |
+|---------|----------------|
+| **EC2** | Run/terminate instances, security groups, key pairs, VPC/subnet discovery |
+| **IAM** | Create roles, instance profiles, attach policies, `PassRole` |
+| **SES** | Verify domains, DKIM, receipt rules, send email, production access |
+| **Route 53** | List/get hosted zones, create/update DNS records (MX, TXT, CNAME) |
+| **S3** | Create bucket, versioning, lifecycle, encryption, bucket policy |
+| **SNS** | Create topic, subscribe Lambda, publish |
+| **Lambda** | Create/update function, event source mappings, permissions |
+| **DynamoDB** | Create table, TTL, read/write items |
+| **SSM** | StartSession (for connecting to instance) |
+| **KMS** | Key operations for S3 encryption |
+| **CloudWatch Logs** | Lambda log groups |
+| **STS** | GetCallerIdentity |
+
+### Minimal Policy (Attach to Your Deploy User/Role)
+
+```bash
+# Save the policy from iam-deployment-policy.json, then:
+aws iam create-policy \
+  --policy-name TerraformHermesDeploy \
+  --policy-document file://iam-deployment-policy.json
+
+# Attach to your user:
+aws iam attach-user-policy \
+  --user-name YOUR_DEPLOY_USER \
+  --policy-arn arn:aws:iam::ACCOUNT_ID:policy/TerraformHermesDeploy
+```
+
+> **Note:** The policy scopes resources to `*hermes*` naming pattern where possible. Adjust if you use a different `var.name`.
+
 ## Teardown
 
 ```sh
