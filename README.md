@@ -194,6 +194,35 @@ through the checks below — each line tells you which stage succeeded.
 | `allowed_ports` | `[3000, 4000, 5000, 5173, 8000, 8080, 8443, 8888]` | Inbound TCP ports open for web prototyping (set `[]` for egress-only) |
 | `tags` | `{Project=…}` | Tags applied to all resources |
 
+## IAM Permissions for Deployment
+
+The identity running `terraform apply` needs permissions for all resources created. See [`iam-deployment-policy.json`](iam-deployment-policy.json) for the complete policy.
+
+### Quick Summary of Required Permissions
+
+| Service | Actions Needed |
+|---------|----------------|
+| **EC2** | Run/terminate instances, security groups, key pairs, VPC/subnet discovery |
+| **IAM** | Create roles, instance profiles, attach policies, `PassRole` |
+| **SSM** | StartSession (for connecting to instance) |
+| **STS** | GetCallerIdentity |
+
+### Minimal Policy (Attach to Your Deploy User/Role)
+
+```bash
+# Save the policy from iam-deployment-policy.json, then:
+aws iam create-policy \
+  --policy-name TerraformHermesDeploy \
+  --policy-document file://iam-deployment-policy.json
+
+# Attach to your user:
+aws iam attach-user-policy \
+  --user-name YOUR_DEPLOY_USER \
+  --policy-arn arn:aws:iam::ACCOUNT_ID:policy/TerraformHermesDeploy
+```
+
+> **Note:** The policy scopes resources to `*hermes*` naming pattern where possible. Adjust if you use a different `var.name`.
+
 ## Teardown
 
 ```sh

@@ -29,6 +29,23 @@ locals {
       key_env_var  = "NVIDIA_API_KEY"
       base_env_var = "NVIDIA_BASE_URL"
     }
+    gemini = {
+      model        = "gemini-2.5-pro"
+      base_url     = "https://generativelanguage.googleapis.com/v1beta"
+      key_env_var  = "GEMINI_API_KEY"
+      base_env_var = "GEMINI_BASE_URL"
+    }
+    # OpenCode Go: $10/mo subscription covering open coding models. The docs list
+    # each model's endpoint as .../v1/chat/completions — that is the full endpoint,
+    # not the base URL, so base_url is the /v1 root (cf. .../go/v1/models).
+    # deepseek-v4-pro is served OpenAI-compatible; note that the MiniMax and Qwen
+    # models on this plan speak the Anthropic /v1/messages shape instead.
+    opencode-go = {
+      model        = "deepseek-v4-pro"
+      base_url     = "https://opencode.ai/zen/go/v1"
+      key_env_var  = "OPENCODE_GO_API_KEY"
+      base_env_var = "OPENCODE_GO_BASE_URL"
+    }
   }
 
   # Resolved provider config — looks up the catalogue entry for the
