@@ -39,11 +39,11 @@ variable "hermes_user" {
 variable "model_provider" {
   description = "Model provider for Hermes. Choose one and the default model + base URL are auto-filled from the provider catalogue in providers.tf."
   type        = string
-  default     = "openrouter"
+  default     = "nvidia"
 
   validation {
-    condition     = contains(["openrouter", "anthropic", "openai", "nvidia"], var.model_provider)
-    error_message = "model_provider must be one of: openrouter, anthropic, openai, nvidia."
+    condition     = contains(["openrouter", "anthropic", "openai", "nvidia", "gemini", "opencode-go"], var.model_provider)
+    error_message = "model_provider must be one of: openrouter, anthropic, openai, nvidia, gemini, opencode-go."
   }
 }
 
@@ -107,3 +107,4 @@ variable "tags" {
     Project = "hermes"
   }
 }
+

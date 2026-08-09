@@ -139,10 +139,15 @@ chown "$HERMES_USER:$HERMES_USER" "$HERMES_HOME/.hermes/.env"
 chmod 600 "$HERMES_HOME/.hermes/.env"
 
 # --- Configure the model provider + default model ----------------------------
+# Set base_url too: it does not auto-update with the provider, so without this
+# config.yaml keeps Hermes' built-in default and only the <PROVIDER>_BASE_URL
+# env var (in .env) points at the right host — leaving config.yaml misleading.
 log "configuring Hermes model provider/default"
 run_as_hermes "hermes config set model.provider '$MODEL_PROVIDER'"
 run_as_hermes "hermes config set model.default '$MODEL_NAME'"
+run_as_hermes "hermes config set model.base_url '$BASE_URL'"
 run_as_hermes "hermes config check"
+run_as_hermes "hermes tools enable vision"
 
 # --- Install + start the Telegram gateway as a persistent user service -------
 # Prefer the per-user service over `--system` so $HERMES_HOME stays owned by the
