@@ -139,10 +139,15 @@ chown "$HERMES_USER:$HERMES_USER" "$HERMES_HOME/.hermes/.env"
 chmod 600 "$HERMES_HOME/.hermes/.env"
 
 # --- Configure the model provider + default model ----------------------------
+# Set base_url too: it does not auto-update with the provider, so without this
+# config.yaml keeps Hermes' built-in default and only the <PROVIDER>_BASE_URL
+# env var (in .env) points at the right host — leaving config.yaml misleading.
 log "configuring Hermes model provider/default"
 run_as_hermes "hermes config set model.provider '$MODEL_PROVIDER'"
 run_as_hermes "hermes config set model.default '$MODEL_NAME'"
+run_as_hermes "hermes config set model.base_url '$BASE_URL'"
 run_as_hermes "hermes config check"
+run_as_hermes "hermes tools enable vision"
 
 # --- Install + start the Telegram gateway as a persistent user service -------
 # Prefer the per-user service over `--system` so $HERMES_HOME stays owned by the
@@ -160,108 +165,5 @@ run_as_hermes "printf 'y\ny\n' | hermes gateway install"
 
 # Show the resulting service state in the boot log for easy verification.
 run_as_hermes "hermes gateway status" || true
-
-# --- Install email webhook skill (if email processing enabled) -----------------
-if [[ -n "${HERMES_WEBHOOK_SECRET:-}" ]]; then
-  log "installing Hermes email webhook skill"
-  run_as_hermes "
-    mkdir -p ~/.hermes/skills/hermes-email-webhook
-    cat > ~/.hermes/skills/hermes-email-webhook/skill.py <<'PYEOF'
-# ~/.hermes/skills/hermes-email-webhook/skill.py
-# Hermes skill: HTTP webhook for receiving emails from AWS Lambda
-from aiohttp import web
-import asyncio
-import json
-import hmac
-import hashlib
-import os
-import subprocess
-
-WEBHOOK_SECRET=os.environ.get('HERMES_WEBHOOK_SECRET', '')
-
-async def verify_request(request):
-    if not WEBHOOK_SECRET:
-        return True
-    sig = request.headers.get('X-Hermes-Signature', '')
-    body = await request.read()
-    expected = hmac.new(WEBHOOK_SECRET.encode(), body, hashlib.sha256).hexdigest()
-    return hmac.compare_digest(expected, sig)
-
-async def email_webhook(request):
-    if not await verify_request(request):
-        return web.Response(status=401, text='Invalid signature')
-
-    data = await request.json()
-
-    if data.get('type') == 'email_received':
-        email_data = data['email']
-        receipt = data.get('receipt', {})
-
-        print(f'📧 [webhook] Email from {email_data[\"from\"]}: {email_data[\"subject\"]}')
-        print(f'   Spam: {receipt.get(\"spam\")}, Virus: {receipt.get(\"virus\")}')
-
-        # Store in Hermes memory for later queries
-        memory_entry = {
-            'type': 'email',
-            'message_id': email_data['message_id'],
-            'from': email_data['from'],
-            'to': email_data['to'],
-            'subject': email_data['subject'],
-            'body': email_data['text_body'][:5000],
-            'received_at': email_data['received_at'],
-            'spam': receipt.get('spam'),
-            'virus': receipt.get('virus')
-        }
-
-        # Write to a JSONL file the agent can read
-        with open(os.path.expanduser('~/.hermes/emails.jsonl'), 'a') as f:
-            f.write(json.dumps(memory_entry) + '\\n')
-
-        # Notify via Telegram if user is allowed
-        allowed_users = os.environ.get('TELEGRAM_ALLOWED_USERS', '').split(',')
-        bot_token = os.environ.get('TELEGRAM_BOT_TOKEN', '')
-        for user_id in allowed_users:
-            if user_id and bot_token:
-                try:
-                    subprocess.run([
-                        'curl', '-s', '-X', 'POST',
-                        f'https://api.telegram.org/bot{bot_token}/sendMessage',
-                        '-d', f'chat_id={user_id}',
-                        '-d', f'text=📧 New email from {email_data[\"from\"]}: {email_data[\"subject\"][:100]}'
-                    ], timeout=5)
-                except Exception:
-                    pass
-
-    return web.json_response({'status': 'ok', 'received': True})
-
-async def health_check(request):
-    return web.json_response({'status': 'healthy', 'service': 'hermes-email-webhook'})
-
-async def start_webhook_server():
-    app = web.Application()
-    app.router.add_post('/webhook/email', email_webhook)
-    app.router.add_get('/health', health_check)
-    runner = web.AppRunner(app)
-    await runner.setup()
-    site = web.TCPSite(runner, '0.0.0.0', 8000)
-    await site.start()
-    print('🌐 Hermes email webhook listening on 0.0.0.0:8000')
-    return runner
-
-# Auto-start when module loads
-if __name__ != '__main__':
-    import sys
-    if 'run_as_hermes' in sys.modules:
-        asyncio.create_task(start_webhook_server())
-else:
-    asyncio.run(start_webhook_server())
-PYEOF
-  "
-
-  # Install aiohttp for the webhook
-  run_as_hermes "~/.local/bin/pip install aiohttp --quiet"
-
-  log "email webhook skill installed"
-fi
 
 log "Hermes bootstrap complete"

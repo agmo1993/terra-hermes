@@ -39,11 +39,11 @@ variable "hermes_user" {
 variable "model_provider" {
   description = "Model provider for Hermes. Choose one and the default model + base URL are auto-filled from the provider catalogue in providers.tf."
   type        = string
-  default     = "openrouter"
+  default     = "nvidia"
 
   validation {
-    condition     = contains(["openrouter", "anthropic", "openai", "nvidia"], var.model_provider)
-    error_message = "model_provider must be one of: openrouter, anthropic, openai, nvidia."
+    condition     = contains(["openrouter", "anthropic", "openai", "nvidia", "gemini", "opencode-go"], var.model_provider)
+    error_message = "model_provider must be one of: openrouter, anthropic, openai, nvidia, gemini, opencode-go."
   }
 }
 
@@ -108,34 +108,3 @@ variable "tags" {
   }
 }
 
-# --- SES Email Configuration --------------------------------------------------
-variable "ses_domain" {
-  description = "Fully qualified domain for SES (e.g., 'hermes.example.com' or 'example.com'). Must exist in your Route 53 hosted zone."
-  type        = string
-  default     = ""
-}
-
-variable "route53_hosted_zone_name" {
-  description = "Name of your existing Route 53 hosted zone (e.g., 'example.com.'). Include trailing dot."
-  type        = string
-  default     = ""
-}
-
-variable "email_s3_bucket_name" {
-  description = "Globally unique S3 bucket name for raw email storage."
-  type        = string
-  default     = ""
-}
-
-variable "enable_email_processing" {
-  description = "Enable full SES → S3 → SNS → Lambda → Hermes pipeline."
-  type        = bool
-  default     = false
-}
-
-variable "hermes_webhook_secret" {
-  description = "HMAC secret for Hermes webhook authentication (generate: openssl rand -hex 32)."
-  type        = string
-  sensitive   = true
-  default     = ""
-}
